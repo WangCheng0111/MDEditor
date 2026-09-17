@@ -1,0 +1,10 @@
+{
+  "profiles": {
+    "MDEditor (Package)": {
+      "commandName": "MsixPackage"
+    },
+    "MDEditor (Unpackaged)": {
+      "commandName": "Project"
+    }
+  }
+}
