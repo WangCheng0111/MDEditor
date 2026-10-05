@@ -1,3 +1,4 @@
+using System;
 using Microsoft.UI.Windowing;
 using Microsoft.UI.Xaml;
 using Windows.ApplicationModel;
@@ -10,6 +11,7 @@ namespace MDEditor
         public MainWindow()
         {
             this.InitializeComponent();
+            InitializeEditorCanvas();
 
             _captionButtons = new[] { MinimizeButton, MaximizeButton, CloseButton };
 
@@ -24,7 +26,11 @@ namespace MDEditor
             ExtendsContentIntoTitleBar = true;
             _appWindow.TitleBar.PreferredHeightOption = TitleBarHeightOption.Collapsed;
 
-            TitleBarTextBlock.Text = AppInfo.Current.DisplayInfo.DisplayName;
+            TitleBarTextBlock.Text = OperatingSystem.IsWindowsVersionAtLeast(10, 0, 19041)
+                ? AppInfo.Current.DisplayInfo.DisplayName : "MDEditor";
+
+            InitializeDocumentWorkflow();
+            InitializeMarkdownTheme();
 
             CenterWindow();
         }

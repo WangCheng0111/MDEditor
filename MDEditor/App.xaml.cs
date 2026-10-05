@@ -44,7 +44,20 @@ namespace MDEditor
         protected override void OnLaunched(Microsoft.UI.Xaml.LaunchActivatedEventArgs args)
         {
             _window = new MainWindow();
+            _window.Closed += MainWindow_Closed;
             _window.Activate();
+        }
+
+        private void MainWindow_Closed(object sender, WindowEventArgs args)
+        {
+            if (_window is null || !ReferenceEquals(sender, _window))
+            {
+                return;
+            }
+
+            _window.Closed -= MainWindow_Closed;
+            _window = null;
+            Exit();
         }
     }
 }

@@ -11,6 +11,12 @@
     <UseWinUI>true</UseWinUI>
     <WinUISDKReferences>false</WinUISDKReferences>
     <EnableMsixTooling>true</EnableMsixTooling>
+    <!-- Reproducible defaults even when local VS publish settings are absent. -->
+    <SelfContained>true</SelfContained>
+    <PublishSingleFile>False</PublishSingleFile>
+    <GenerateAppxPackageOnBuild Condition="'$(GenerateAppxPackageOnBuild)' == ''">false</GenerateAppxPackageOnBuild>
+    <!-- MathWorker is a build-order/package payload reference, never loaded as an app assembly. -->
+    <ValidateExecutableReferencesMatchSelfContained>false</ValidateExecutableReferencesMatchSelfContained>
     <Nullable>enable</Nullable>
   </PropertyGroup>
   <ItemGroup>
@@ -24,6 +30,8 @@
 
   <ItemGroup>
     <Content Include="Assets\Tiles\GalleryIcon.ico" />
+    <Content Include="Assets\Tiles\StoreDisplay-300.png" CopyToOutputDirectory="PreserveNewest" />
+    <Content Include="Assets\Codicons\NOTICE.txt" CopyToOutputDirectory="PreserveNewest" CopyToPublishDirectory="PreserveNewest" />
     <Content Include="Fonts\HarmonyOS_SansSC_Black.ttf">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </Content>
@@ -48,6 +56,19 @@
     <Manifest Include="$(ApplicationManifest)" />
   </ItemGroup>
 
+  <!-- Offline tokenizer: ship only the selected platform's runtime, not system Node/CDNs. -->
+  <ItemGroup>
+    <!-- WinUI includes Assets recursively by default; remove that implicit set first. -->
+    <Content Remove="Assets\StarryNight\**\*" />
+    <None Remove="Assets\StarryNight\**\*" />
+    <Content Include="Assets\StarryNight\*" CopyToOutputDirectory="PreserveNewest" CopyToPublishDirectory="PreserveNewest" />
+    <Content Include="Assets\StarryNight\runtimes\$(RuntimeIdentifier)\node.exe" CopyToOutputDirectory="PreserveNewest" CopyToPublishDirectory="PreserveNewest" />
+  </ItemGroup>
+  <Target Name="ValidateStarryNightPayload" BeforeTargets="PrepareForBuild">
+    <Error Condition="!Exists('Assets\StarryNight\worker.mjs') or !Exists('Assets\StarryNight\onig.wasm') or !Exists('Assets\StarryNight\runtimes\$(RuntimeIdentifier)\node.exe')"
+      Text="Offline starry-night payload is missing. See docs/starry-night-highlighting.md; do not publish an incomplete package." />
+  </Target>
+
   <!--
     Defining the "Msix" ProjectCapability here allows the Single-project MSIX Packaging
     Tools extension to be activated for this project even if the Windows App SDK Nuget
@@ -60,6 +81,25 @@
     <PackageReference Include="CommunityToolkit.Mvvm" Version="8.4.2" />
     <PackageReference Include="Microsoft.Windows.SDK.BuildTools" Version="10.0.28000.2526" />
     <PackageReference Include="Microsoft.WindowsAppSDK" Version="2.4.0" />
+  </ItemGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\MDEditor.Core\MDEditor.Core.csproj" />
+    <ProjectReference Include="..\MDEditor.Typesetting\MDEditor.Typesetting.csproj" />
+    <ProjectReference Include="..\MDEditor.Native\MDEditor.Native.csproj" />
+    <ProjectReference Include="..\MDEditor.MathWorker\MDEditor.MathWorker.csproj" ReferenceOutputAssembly="false" />
+  </ItemGroup>
+  <!-- These project outputs change during normal editing. Keep them as fresh IL in MSIX;
+       precompile stable runtime/third-party dependencies only. -->
+  <ItemGroup>
+    <PublishReadyToRunExclude Include="MDEditor.dll" />
+    <PublishReadyToRunExclude Include="MDEditor.Core.dll" />
+    <PublishReadyToRunExclude Include="MDEditor.Typesetting.dll" />
+    <PublishReadyToRunExclude Include="MDEditor.Native.dll" />
+    <PublishReadyToRunExclude Include="MDEditor.MathWorker.dll" />
+  </ItemGroup>
+  <ItemGroup>
+    <!-- The build graph supplies apphost/deps/runtimeconfig; add the non-reference worker assembly and PRI. -->
+    <Content Include="..\MDEditor.MathWorker\bin\$(Platform)\$(Configuration)\net10.0-windows10.0.19041.0\$(RuntimeIdentifier)\MDEditor.MathWorker.dll" Link="MDEditor.MathWorker.dll" CopyToOutputDirectory="PreserveNewest" CopyToPublishDirectory="PreserveNewest" />
   </ItemGroup>
   <ItemGroup>
     <Folder Include="Resources\" />
@@ -82,10 +122,31 @@
 
   <!-- Publish Properties -->
   <PropertyGroup>
-    <PublishReadyToRun Condition="'$(Configuration)' == 'Debug'">False</PublishReadyToRun>
-    <PublishReadyToRun Condition="'$(Configuration)' != 'Debug'">True</PublishReadyToRun>
-    <PublishTrimmed Condition="'$(Configuration)' == 'Debug'">False</PublishTrimmed>
-    <PublishTrimmed Condition="'$(Configuration)' != 'Debug'">True</PublishTrimmed>
+    <!-- ReadyToRun belongs to publish, not an incremental VS build/deploy: otherwise AppX can
+         retain an older R2R dependency even after the referenced project has rebuilt. -->
+    <PublishReadyToRun Condition="'$(Configuration)' == 'Debug' or '$(_IsPublishing)' != 'true'">False</PublishReadyToRun>
+    <PublishReadyToRun Condition="'$(Configuration)' != 'Debug' and '$(_IsPublishing)' == 'true'">True</PublishReadyToRun>
+    <!-- The MSIX carries a second .NET executable (MathWorker). Trimming the UI
+         publish output removes framework assemblies that the worker still needs,
+         even though they share the package root. Keep both processes untrimmed. -->
+    <PublishTrimmed>False</PublishTrimmed>
     <ApplicationIcon>Assets\Tiles\GalleryIcon.ico</ApplicationIcon>
+    <GenerateAppInstallerFile>False</GenerateAppInstallerFile>
+    <AppxPackageSigningEnabled>True</AppxPackageSigningEnabled>
+    <PackageCertificateThumbprint>52BBC0329DB0B07CC5BCC197C122324603223172</PackageCertificateThumbprint>
+    <AppxPackageSigningTimestampDigestAlgorithm>SHA256</AppxPackageSigningTimestampDigestAlgorithm>
+    <AppxAutoIncrementPackageRevision>True</AppxAutoIncrementPackageRevision>
+    <GenerateTestArtifacts>False</GenerateTestArtifacts>
+    <AppxBundle>Never</AppxBundle>
+    <HoursBetweenUpdateChecks>0</HoursBetweenUpdateChecks>
   </PropertyGroup>
+  <Target Name="ValidateReleaseConfiguration" BeforeTargets="PrepareForBuild" Condition="'$(DesignTimeBuild)' != 'true'">
+    <Error Condition="('$(Platform)' != 'x64' and '$(Platform)' != 'x86' and '$(Platform)' != 'ARM64') or
+      ('$(Platform)' == 'x64' and '$(RuntimeIdentifier)' != 'win-x64') or
+      ('$(Platform)' == 'x86' and '$(RuntimeIdentifier)' != 'win-x86') or
+      ('$(Platform)' == 'ARM64' and '$(RuntimeIdentifier)' != 'win-arm64')"
+      Text="MDEditor needs matching Platform/RuntimeIdentifier: x64/win-x64, x86/win-x86 or ARM64/win-arm64." />
+    <Error Condition="'$(SelfContained)' != 'true' or '$(PublishTrimmed)' == 'true' or '$(PublishSingleFile)' == 'true'"
+      Text="MDEditor and MathWorker share a complete .NET runtime: keep SelfContained=true, PublishTrimmed=false and PublishSingleFile=false." />
+  </Target>
 </Project>

@@ -1,0 +1,37 @@
+<Project Sdk="MSTest.Sdk/4.3.3">
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <Platforms>AnyCPU</Platforms>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+    <IsPackable>false</IsPackable>
+    <TestingExtensionsProfile>None</TestingExtensionsProfile>
+  </PropertyGroup>
+  <ItemGroup>
+    <ProjectReference Include="../../MDEditor.Core/MDEditor.Core.csproj" />
+    <ProjectReference Include="../../MDEditor.Typesetting/MDEditor.Typesetting.csproj" />
+  </ItemGroup>
+  <ItemGroup>
+    <Compile Include="../../MDEditor.Native/Rendering/DeviceResourceOwner.cs" Link="NativeLifecycle/DeviceResourceOwner.cs" />
+    <Compile Include="../../MDEditor.Native/Rendering/CompletedLayoutCache.cs" Link="NativeLifecycle/CompletedLayoutCache.cs" />
+    <Compile Include="../../MDEditor.Native/Rendering/SharedResource.cs" Link="NativeLifecycle/SharedResource.cs" />
+    <Compile Include="../../MDEditor.Native/Rendering/CanvasSceneBounds.cs" Link="NativeLifecycle/CanvasSceneBounds.cs" />
+    <Compile Include="../../MDEditor.Native/Text/GlyphClusterDecoder.cs" Link="NativeText/GlyphClusterDecoder.cs" />
+    <Compile Include="../../MDEditor/Services/StarryNightClient.cs" Link="Highlighting/StarryNightClient.cs" />
+  </ItemGroup>
+  <!-- Copy only configuration snapshots: tests never build/load the WinUI app. -->
+  <ItemGroup>
+    <Content Include="../../global.json" Link="Architecture/global.json" CopyToOutputDirectory="PreserveNewest" />
+    <Content Include="../../MDEditor/MDEditor.csproj" Link="Architecture/MDEditor/MDEditor.csproj" CopyToOutputDirectory="PreserveNewest" />
+    <Content Include="../../MDEditor/MDEditor.slnx" Link="Architecture/MDEditor/MDEditor.slnx" CopyToOutputDirectory="PreserveNewest" />
+    <Content Include="../../MDEditor.Core/MDEditor.Core.csproj" Link="Architecture/MDEditor.Core/MDEditor.Core.csproj" CopyToOutputDirectory="PreserveNewest" />
+    <Content Include="../../MDEditor.Typesetting/MDEditor.Typesetting.csproj" Link="Architecture/MDEditor.Typesetting/MDEditor.Typesetting.csproj" CopyToOutputDirectory="PreserveNewest" />
+    <Content Include="../../MDEditor.Native/MDEditor.Native.csproj" Link="Architecture/MDEditor.Native/MDEditor.Native.csproj" CopyToOutputDirectory="PreserveNewest" />
+    <Content Include="../../MDEditor.MathWorker/MDEditor.MathWorker.csproj" Link="Architecture/MDEditor.MathWorker/MDEditor.MathWorker.csproj" CopyToOutputDirectory="PreserveNewest" />
+    <Content Include="MDEditor.Core.Tests.csproj" Link="Architecture/tests/MDEditor.Core.Tests/MDEditor.Core.Tests.csproj" CopyToOutputDirectory="PreserveNewest" />
+    <Content Include="../../MDEditor/Properties/PublishProfiles/*.pubxml" Link="Architecture/PublishProfiles/%(Filename)%(Extension)" CopyToOutputDirectory="PreserveNewest" />
+    <Content Include="../../MDEditor/Package.appxmanifest" Link="Architecture/Package.appxmanifest" CopyToOutputDirectory="PreserveNewest" />
+    <Content Include="../../tools/ReleasePayload.psm1" Link="Architecture/Release/ReleasePayload.psm1" CopyToOutputDirectory="PreserveNewest" />
+    <Content Include="../Verify-ReleasePayloadTests.ps1" Link="Architecture/Release/Verify-ReleasePayloadTests.ps1" CopyToOutputDirectory="PreserveNewest" />
+  </ItemGroup>
+</Project>

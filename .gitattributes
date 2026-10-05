@@ -1,0 +1,2 @@
+# Keep the pinned embedded hyphenation resource byte-identical across Git checkouts.
+MDEditor.Typesetting/Hyphenation/Data/hyph-en-us.tex text eol=lf

@@ -22,6 +22,7 @@ bld/
 [Oo]bj/
 [Ll]og/
 [Ll]ogs/
+**/AppPackages/
 
 # .NET Core
 project.lock.json
@@ -49,6 +50,7 @@ CodeCoverage/
 
 # Visual Studio local state
 .vs/
+*.csproj.user
 
 # MSTest test Results
 [Tt]est[Rr]esult*/
@@ -58,6 +60,9 @@ CodeCoverage/
 *.VisualState.xml
 TestResult.xml
 nunit-*.xml
-MDEditor/Properties/PublishProfiles/win-arm64.pubxml
-MDEditor/Properties/PublishProfiles/win-x64.pubxml
-MDEditor/Properties/PublishProfiles/win-x86.pubxml
+# Shared publish profiles contain no credentials and must travel with the source.
+*.pubxml.user
+
+# Highlighter development dependencies (the generated offline payload is intentional).
+tools/StarryNight/node_modules/
+tools/StarryNight/npm-cache/

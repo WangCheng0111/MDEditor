@@ -22,11 +22,8 @@ namespace MDEditor
 
         private static readonly TimeSpan AnimationDuration = TimeSpan.FromMilliseconds(200);
 
-        private static readonly Color IconBaseColor = Color.FromArgb(0xFF, 0x2D, 0x2D, 0x2D);
-        private static readonly Color IconDimmedColor = Color.FromArgb(0xFF, 0xA0, 0xA0, 0xA0);
         private static readonly Color IconWhiteColor = Color.FromArgb(0xFF, 0xFF, 0xFF, 0xFF);
 
-        private static readonly Color TransparentColor = Color.FromArgb(0x00, 0xFF, 0xFF, 0xFF);
         private static readonly Color HoverBackground = Color.FromArgb(0xFF, 0xD9, 0xDD, 0xE2);
         private static readonly Color PressedBackground = Color.FromArgb(0xFF, 0xC2, 0xC5, 0xCA);
         private static readonly Color CloseHoverBackground = Color.FromArgb(0xFF, 0xE8, 0x11, 0x23);
@@ -43,7 +40,8 @@ namespace MDEditor
         private RectInt32 _maximizeRect;
         private RectInt32 _closeRect;
 
-        private Color BaseIconColor => _isWindowDeactivated ? IconDimmedColor : IconBaseColor;
+        private Color BaseIconColor => _isWindowDeactivated ?
+            _captionTheme.MutedForeground : _captionTheme.Foreground;
 
         private readonly Button[] _captionButtons = null!;
 
@@ -189,16 +187,29 @@ namespace MDEditor
 
             var titleBarBounds = AppTitleBar.TransformToVisual(null)
                 .TransformBounds(new Rect(0, 0, AppTitleBar.ActualWidth, AppTitleBar.ActualHeight));
-            var minimizeLeft = MinimizeButton.TransformToVisual(null).TransformPoint(new Point(0, 0));
+            var themeButtonLeft = ThemeToggleButton.TransformToVisual(null).TransformPoint(new Point(0, 0));
             var captionRect = GetRect(
                 new Rect(titleBarBounds.X, titleBarBounds.Y,
-                         minimizeLeft.X - titleBarBounds.X,
+                         themeButtonLeft.X - titleBarBounds.X,
                          titleBarBounds.Height),
                 scaleAdjustment);
 
             _minimizeRect = GetRegionRect(MinimizeButton, scaleAdjustment);
             _maximizeRect = GetRegionRect(MaximizeButton, scaleAdjustment);
             _closeRect = GetRegionRect(CloseButton, scaleAdjustment);
+
+            // Match Demo: title-bar action buttons receive native XAML input through Passthrough.
+            // Keep their surrounding whitespace draggable without overlapping the clickable rect.
+            var themeButtonRect = GetRegionRect(ThemeToggleButton, scaleAdjustment);
+            var themeTopGapRect = new RectInt32(
+                themeButtonRect.X, captionRect.Y, themeButtonRect.Width,
+                themeButtonRect.Y - captionRect.Y);
+            var themeBottomGapRect = new RectInt32(
+                themeButtonRect.X, themeButtonRect.Y + themeButtonRect.Height, themeButtonRect.Width,
+                captionRect.Y + captionRect.Height - (themeButtonRect.Y + themeButtonRect.Height));
+            var themeMinGapRect = new RectInt32(
+                themeButtonRect.X + themeButtonRect.Width, captionRect.Y,
+                _minimizeRect.X - (themeButtonRect.X + themeButtonRect.Width), captionRect.Height);
 
             // 金刚键列的上/下空隙与按钮间空隙注册为 Caption，使其可拖动窗口
             var buttonColumnLeft = _minimizeRect.X;
@@ -232,11 +243,12 @@ namespace MDEditor
                 _closeRect.Height);
 
             ApplyRegionRects(NonClientRegionKind.Caption,
-                new[] { captionRect, topGapRect, bottomGapRect, minMaxGapRect, maxCloseGapRect, closeRightGapRect });
+                new[] { captionRect, themeTopGapRect, themeBottomGapRect, themeMinGapRect,
+                    topGapRect, bottomGapRect, minMaxGapRect, maxCloseGapRect, closeRightGapRect });
                 ApplyRegionRects(NonClientRegionKind.Minimize, new[] { _minimizeRect });
                 ApplyRegionRects(NonClientRegionKind.Maximize, new[] { _maximizeRect });
                 ApplyRegionRects(NonClientRegionKind.Close, new[] { _closeRect });
-                ApplyRegionRects(NonClientRegionKind.Passthrough, Array.Empty<RectInt32>());
+                ApplyRegionRects(NonClientRegionKind.Passthrough, new[] { themeButtonRect });
         }
 
         private RectInt32 GetRegionRect(FrameworkElement element, double scaleAdjustment)
@@ -305,21 +317,24 @@ namespace MDEditor
 
         private void ApplyButtonVisual(Button button, string stateName, TimeSpan duration)
         {
+            var hoverBackground = button == CloseButton ? CloseHoverBackground :
+                _captionTheme.IsDark ? _captionTheme.Border : HoverBackground;
             Color background;
             Color foreground;
 
             switch (stateName)
             {
                 case StatePressed:
-                    background = button == CloseButton ? ClosePressedBackground : PressedBackground;
-                    foreground = button == CloseButton ? IconWhiteColor : IconBaseColor;
+                    background = button == CloseButton ? ClosePressedBackground :
+                        _captionTheme.IsDark ? Color.FromArgb(255, 48, 54, 61) : PressedBackground;
+                    foreground = button == CloseButton ? IconWhiteColor : _captionTheme.Foreground;
                     break;
                 case StatePointerOver:
-                    background = button == CloseButton ? CloseHoverBackground : HoverBackground;
-                    foreground = button == CloseButton ? IconWhiteColor : IconBaseColor;
+                    background = hoverBackground;
+                    foreground = button == CloseButton ? IconWhiteColor : _captionTheme.Foreground;
                     break;
                 default:
-                    background = TransparentColor;
+                    background = Color.FromArgb(0, hoverBackground.R, hoverBackground.G, hoverBackground.B);
                     foreground = BaseIconColor;
                     break;
             }
@@ -340,8 +355,17 @@ namespace MDEditor
 
         private void AnimateButtonBackground(Button button, Color to, TimeSpan duration)
         {
+            var from = ((SolidColorBrush)button.Background).Color;
+            // Transparent white has no visible color, but its RGB still participates in
+            // ColorAnimation. Match the visible endpoint to avoid a bright intermediate
+            // frame, including first hover and interrupted pressed/hover transitions.
+            if (from.A == 0)
+                from = Color.FromArgb(0, to.R, to.G, to.B);
+            if (to.A == 0)
+                to = Color.FromArgb(0, from.R, from.G, from.B);
+
             AnimateColor(button, "(Control.Background).(SolidColorBrush.Color)",
-                ((SolidColorBrush)button.Background).Color, to, duration);
+                from, to, duration);
         }
 
         private void AnimateButtonForeground(Button button, Color to, TimeSpan duration)
@@ -369,6 +393,9 @@ namespace MDEditor
         {
             bool deactivated = args.WindowActivationState == WindowActivationState.Deactivated;
             _isWindowDeactivated = deactivated;
+            // Demo's title-bar action buttons update their inactive foreground directly;
+            // their hover/press animations remain owned by the XAML template.
+            ThemeToggleButton.Foreground = new SolidColorBrush(BaseIconColor);
 
             // 推迟到激活流程稳定后再启动动画：
             // 在窗口激活瞬间启动的 Storyboard 可能被系统吞掉或快速推进。
@@ -406,10 +433,8 @@ namespace MDEditor
 
         private void AnimateWindowActivation(bool isDeactivated, Button? skipButton = null)
         {
-            var targetBrush = (SolidColorBrush)App.Current.Resources[
-                isDeactivated ? "WindowCaptionForegroundDisabled" : "WindowCaptionForeground"];
             var targetOpacity = isDeactivated ? 0.4 : 1.0;
-            var targetButtonColor = isDeactivated ? IconDimmedColor : IconBaseColor;
+            var targetButtonColor = isDeactivated ? _captionTheme.MutedForeground : _captionTheme.Foreground;
 
             // 每次使用全新 Storyboard：对同一属性启动新动画会自动替换旧动画，
             // 避免复用实例 Stop() 造成值回跳或时序异常。
@@ -418,7 +443,7 @@ namespace MDEditor
             AddAnimationTo(storyboard, TitleBarTextBlock,
                 "(TextBlock.Foreground).(SolidColorBrush.Color)",
                 ((SolidColorBrush)TitleBarTextBlock.Foreground).Color,
-                targetBrush.Color);
+                targetButtonColor);
 
             AddAnimationTo(storyboard, TitleBarIcon,
                 "Opacity",
