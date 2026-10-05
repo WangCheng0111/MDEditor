@@ -4,7 +4,7 @@
 
 只选 `MDEditor/MDEditor.csproj`。现有单项目 MSIX 流程会携带 Core、Typesetting、Native、数学子进程及离线代码高亮资源；不要分别发布这些项目，也不需要多选所有项目。
 
-`MDEditor.MathWorker.exe` 用于公式塑形，随包的 Node 用于 starry-night 高亮，都是应用自己启动的后台子进程。用户启动入口只有 MDEditor。**不要求改成 Windows Application Packaging Project（WAPP）**；此前说明中“正式发行必须迁移 WAPP”的结论已撤回。可以继续使用已验证的单项目流程，以实际依赖校验和目标机器运行结果为准。
+`MDEditor.MathWorker.exe` 用于公式塑形，随包的 Node 用于 starry-night 高亮，都是应用自己启动的后台子进程。用户启动入口只有 MDEditor。**不要求使用 Windows Application Packaging Project（WAPP）**，继续使用单项目流程，以依赖校验和目标机器运行结果为准。
 
 ## 正常开发，不生成安装包
 
@@ -48,4 +48,6 @@ MSBuild.exe MDEditor/MDEditor.csproj /t:Build /p:Configuration=Release /p:Platfo
 
 ARM64 的交叉构建在 x64 机器只能加 `-StaticOnly` 检查文件，不能标记为运行通过。即使 x86 子进程在 WoW64 通过，也不代替完整 x86 UI 验收。真正的 ARM64 机器与干净目标机器安装仍需发布者实测。
 
-最后应从安装后的 Windows 入口（而不是仅 VS F5）回归：标题栏/Snap、输入法、连续编辑/删除、搜索替换、公式和代码高亮、本地图片、打开保存恢复、矢量 PDF、缩放滚动及退出后的子进程释放。清单见 [步骤35](step-35-release-regression.md)。
+最后应从安装后的 Windows 入口（而不是仅 VS F5）回归：标题栏/Snap、输入法、连续编辑/删除、搜索替换、公式和代码高亮、本地图片、打开保存恢复、矢量 PDF、缩放滚动及退出后的子进程释放。
+
+交叉构建成功不等于实机验收。正式发布前需在对应架构和干净目标机器验证安装、离线依赖、签名信任及上述功能；不要只用已安装开发依赖的电脑判断完整性。

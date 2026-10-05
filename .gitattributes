@@ -1,2 +1,6 @@
 # Keep the pinned embedded hyphenation resource byte-identical across Git checkouts.
 MDEditor.Typesetting/Hyphenation/Data/hyph-en-us.tex text eol=lf
+# Generated grammar strings and upstream license text contain intentional whitespace.
+MDEditor/Assets/StarryNight/worker.mjs text eol=lf -whitespace
+MDEditor/Assets/StarryNight/GRAMMAR-NOTICES.txt text eol=lf -whitespace
+MDEditor/Assets/StarryNight/NODE-LICENSE.txt text eol=lf -whitespace

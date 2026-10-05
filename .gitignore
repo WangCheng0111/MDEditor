@@ -62,6 +62,9 @@ TestResult.xml
 nunit-*.xml
 # Shared publish profiles contain no credentials and must travel with the source.
 *.pubxml.user
+# Package-signing private keys belong only on the publisher's machine.
+*.pfx
+*.p12
 
 # Highlighter development dependencies (the generated offline payload is intentional).
 tools/StarryNight/node_modules/
