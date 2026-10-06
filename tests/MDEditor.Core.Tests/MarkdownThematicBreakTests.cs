@@ -10,6 +10,75 @@ public sealed class MarkdownThematicBreakTests
 {
     [TestMethod]
     [DataRow("---")]
+    [DataRow("--- ")]
+    [DataRow("***")]
+    [DataRow("___")]
+    [DataRow("- - -")]
+    [DataRow("   ---  ")]
+    [DataRow("> ---")]
+    public void Typing_a_complete_rule_at_eof_previews_it_without_enter(string marker)
+    {
+        var source = new SourceTextSnapshot(marker, 12);
+        var preview = MarkdownRichTextProjection.Create(source, source.Length,
+            revealThematicBreakBoundaries: false);
+        Assert.AreEqual("\uFFFC", preview.Text.Display.Text);
+        Assert.IsTrue(preview.ThematicBreaks.Single().MarkerHidden);
+        Assert.AreEqual(marker, preview.Text.Source.Text);
+        var entered = MarkdownRichTextProjection.FromSyntax(preview.Syntax, source.Length);
+        Assert.AreEqual(marker, entered.Text.Display.Text);
+        Assert.IsFalse(entered.ThematicBreaks.Single().MarkerHidden);
+    }
+
+    [TestMethod]
+    public void Explicit_interior_edit_and_source_mode_remain_literal()
+    {
+        var source = new SourceTextSnapshot("---", 1);
+        Assert.AreEqual("---", MarkdownRichTextProjection.Create(source, 1,
+            revealThematicBreakBoundaries: false).Text.Display.Text);
+        var literal = MarkdownRichTextProjection.FromSyntax(MarkdownSyntaxParser.Parse(source), 3,
+            sourceMode: true, revealThematicBreakBoundaries: false);
+        Assert.AreSame(source, literal.Text.Display);
+    }
+
+    [TestMethod]
+    public void Thin_rule_preserves_a_full_height_caret_at_both_source_edges()
+    {
+        var rich = MarkdownRichTextProjection.Create(new("--- ", 9), 4,
+            revealThematicBreakBoundaries: false);
+        var rule = rich.ThematicBreaks.Single();
+        var line = MarkdownThematicBreakLayout.Create(rule.Line, 600, 24, 16);
+        var map = new MarkdownProjectionInteractionMap(rich.Text,
+            new TextInteractionMap(rich.Text.Display, TextSurface.Body, [line]));
+        Assert.AreEqual(4d, line.Bounds.Height);
+        foreach (var offset in new[] { 0, 4 })
+        {
+            var caret = map.Resolve(new(TextSurface.Body, 9, offset, CaretAffinity.Downstream));
+            Assert.IsNotNull(caret);
+            Assert.AreEqual(24d, caret.Value.Height);
+        }
+        Assert.AreEqual(24d, map.Lines.Single().CaretHeight);
+    }
+
+    [TestMethod]
+    public void Incremental_eof_typing_spaces_and_deletion_match_a_fresh_parse()
+    {
+        var syntax = MarkdownSyntaxParser.Parse(new("", 0));
+        var version = 0L;
+        foreach (var text in new[] { "-", "--", "---", "--- ", "---  ", "-- ", "- ", " ", "" })
+        {
+            var source = new SourceTextSnapshot(text, ++version);
+            syntax = MarkdownIncrementalParser.Update(syntax, source).Syntax;
+            var incremental = MarkdownRichTextProjection.FromSyntax(syntax, text.Length,
+                revealThematicBreakBoundaries: false);
+            var fresh = MarkdownRichTextProjection.Create(source, text.Length,
+                revealThematicBreakBoundaries: false);
+            Assert.AreEqual(fresh.Text.Display.Text, incremental.Text.Display.Text, text);
+            CollectionAssert.AreEqual(fresh.ThematicBreaks.ToArray(), incremental.ThematicBreaks.ToArray());
+        }
+    }
+
+    [TestMethod]
+    [DataRow("---")]
     [DataRow("***")]
     [DataRow("___")]
     [DataRow("- - -")]

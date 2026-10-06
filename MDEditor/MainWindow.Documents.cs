@@ -309,7 +309,7 @@ public sealed partial class MainWindow
     private void UpdateDocumentTitle()
     {
         var name = _documentSession.FilePath is null ? "未命名" : Path.GetFileName(_documentSession.FilePath);
-        var title = $"{name}{(_documentSession.IsDirty ? " *" : "")} - MDEditor";
+        var title = $"{name}{(_documentSession.IsDirty ? " *" : "")}";
         TitleBarTextBlock.Text = title;
         _appWindow.Title = title;
     }

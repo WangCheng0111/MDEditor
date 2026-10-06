@@ -44,7 +44,8 @@ public sealed class MarkdownEditProjection
     public ImmutableArray<MarkdownProjectionUnit> SyntaxUnits { get; }
     public ImmutableArray<SourceRange> HiddenRanges { get; }
 
-    private MarkdownEditProjection(MarkdownSyntaxDocument syntax, int? revealedAtSourceOffset, bool sourceMode = false)
+    private MarkdownEditProjection(MarkdownSyntaxDocument syntax, int? revealedAtSourceOffset, bool sourceMode = false,
+        bool revealThematicBreakBoundaries = true)
     {
         _syntax = syntax;
         IsSourceMode = sourceMode;
@@ -74,7 +75,9 @@ public sealed class MarkdownEditProjection
             new MarkdownDisplayReplacement(rule.Source, "\uFFFC", MarkdownReplacementKind.ThematicBreak)))
             .Where(replacement =>
             RevealedAtSourceOffset is not { } reveal ||
-            reveal < replacement.Source.Start || reveal > replacement.Source.End)
+            reveal < replacement.Source.Start || reveal > replacement.Source.End ||
+            !revealThematicBreakBoundaries && replacement.Kind == MarkdownReplacementKind.ThematicBreak &&
+                (reveal == replacement.Source.Start || reveal == replacement.Source.End))
             .OrderBy(replacement => replacement.Source.Start)
             .ToImmutableArray();
         var structural = Blocks.Blocks.Where(block => block.Kind != MarkdownBlockKind.None &&
@@ -188,8 +191,10 @@ public sealed class MarkdownEditProjection
         _displayGraphemeStops = GraphemeStops(Display.Text);
     }
 
-    public static MarkdownEditProjection Create(MarkdownSyntaxDocument syntax, int? revealAtSourceOffset = null) =>
-        new(syntax ?? throw new ArgumentNullException(nameof(syntax)), revealAtSourceOffset);
+    public static MarkdownEditProjection Create(MarkdownSyntaxDocument syntax, int? revealAtSourceOffset = null,
+        bool revealThematicBreakBoundaries = true) =>
+        new(syntax ?? throw new ArgumentNullException(nameof(syntax)), revealAtSourceOffset,
+            revealThematicBreakBoundaries: revealThematicBreakBoundaries);
 
     public static MarkdownEditProjection CreateSource(MarkdownSyntaxDocument syntax) =>
         new(syntax ?? throw new ArgumentNullException(nameof(syntax)), null, true);

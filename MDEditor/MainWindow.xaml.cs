@@ -1,7 +1,5 @@
-using System;
 using Microsoft.UI.Windowing;
 using Microsoft.UI.Xaml;
-using Windows.ApplicationModel;
 using Windows.Graphics;
 
 namespace MDEditor
@@ -25,9 +23,6 @@ namespace MDEditor
 
             ExtendsContentIntoTitleBar = true;
             _appWindow.TitleBar.PreferredHeightOption = TitleBarHeightOption.Collapsed;
-
-            TitleBarTextBlock.Text = OperatingSystem.IsWindowsVersionAtLeast(10, 0, 19041)
-                ? AppInfo.Current.DisplayInfo.DisplayName : "MDEditor";
 
             InitializeDocumentWorkflow();
             InitializeMarkdownTheme();

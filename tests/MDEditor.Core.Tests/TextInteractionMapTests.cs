@@ -7,6 +7,37 @@ namespace MDEditor.Core.Tests;
 [TestClass]
 public sealed class TextInteractionMapTests
 {
+    [TestMethod]
+    [DataRow(" ")]
+    [DataRow("   ")]
+    public void Whitespace_only_lines_keep_every_real_source_caret(string text)
+    {
+        var source = new SourceTextSnapshot(text, 3);
+        var bounds = new LayoutRect(20, 0, 100, 24);
+        var empty = new LineLayout(source.FullRange, new(20, 0, 0, 24), 16, 0, []);
+        var snapshot = new LayoutSnapshot(source, bounds, [],
+            [new BlockLayout(source.FullRange, bounds, [empty])]);
+        var map = TextInteractionMap.FromSnapshot(snapshot);
+        for (var offset = 0; offset <= text.Length; offset++)
+            Assert.AreEqual(new LayoutRect(20, 0, 0, 24),
+                map.Resolve(new(TextSurface.Body, 3, offset, CaretAffinity.Downstream)));
+    }
+
+    [TestMethod]
+    public void Omitted_boundary_spaces_remain_editable_without_adding_glyphs()
+    {
+        var source = new SourceTextSnapshot("     ", 3);
+        var bounds = new LayoutRect(20, 0, 100, 24);
+        var empty = new LineLayout(new(2, 0), new(20, 0, 0, 24), 16, 0, []);
+        var snapshot = new LayoutSnapshot(source, bounds, [],
+            [new BlockLayout(source.FullRange, bounds, [empty])]);
+        var map = TextInteractionMap.FromSnapshot(snapshot);
+        Assert.AreEqual(source.FullRange, map.Lines.Single().Source);
+        for (var offset = 0; offset <= source.Length; offset++)
+            Assert.IsNotNull(map.Resolve(new(TextSurface.Body, 3, offset, CaretAffinity.Downstream)));
+        Assert.IsTrue(snapshot.Blocks.Single().Lines.Single().Runs.IsEmpty);
+    }
+
     private static TextInteractionMap TwoLines() => new(new("abcd efgh", 17), TextSurface.Body,
     [
         new(new(0, 4), new(0, 0, 40, 20),

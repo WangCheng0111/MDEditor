@@ -27,8 +27,8 @@ namespace MDEditor.Controls;
 public sealed partial class EditorCanvas : UserControl, IDisposable
 {
     public EditorViewportViewModel ViewModel { get; } = new();
-    private StyledDocumentBuffer _editorText = ReflowSample.CreateEditableBuffer();
-    private bool _showSampleMathPage = true;
+    private StyledDocumentBuffer _editorText = new("", [new(0, ReflowContent.FileStyleIndex)]);
+    private bool _showSampleMathPage;
     private TypographyPreset _typography = TypographyPreset.Balanced;
     private long _typographyRevision;
     private long _documentIdentity;
@@ -192,7 +192,8 @@ public sealed partial class EditorCanvas : UserControl, IDisposable
         _surface.Children.Insert(0, canvas); _surface.Children.Insert(1, heading);
         _surface.Children.Insert(2, mathHeading); _surface.Children.Insert(3, overlay);
         AttachImeInput();
-        _ = InitializeMarkdownMathAsync();
+        if (_showSampleMathPage) _ = InitializeMarkdownMathAsync();
+        else RequestEditableMathLayouts();
     }
     private void EditorCanvas_Unloaded(object sender, RoutedEventArgs args)
     { _markdownMathCancellation?.Cancel(); _editableMathCancellation?.Cancel(); DetachImeInput(); ReleaseSurface(); }

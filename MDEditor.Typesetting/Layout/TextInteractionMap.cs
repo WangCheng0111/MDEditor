@@ -26,16 +26,20 @@ public sealed class TextInteractionLine
 {
     public SourceRange Source { get; }
     public LayoutRect Bounds { get; }
+    public double CaretHeight { get; }
     public IReadOnlyList<TextInteractionSpan> Spans { get; }
 
-    public TextInteractionLine(SourceRange source, LayoutRect bounds, IEnumerable<TextInteractionSpan> spans)
+    public TextInteractionLine(SourceRange source, LayoutRect bounds, IEnumerable<TextInteractionSpan> spans,
+        double? caretHeight = null)
     {
         ArgumentNullException.ThrowIfNull(spans);
         var copy = spans.ToArray();
         foreach (var span in copy)
             if (!source.Contains(span.Source) || !double.IsFinite(span.StartX) || !double.IsFinite(span.EndX))
                 throw new ArgumentException("A visual span must be finite and belong to its line.", nameof(spans));
-        Source = source; Bounds = bounds; Spans = Array.AsReadOnly(copy);
+        if (caretHeight is { } height && (!double.IsFinite(height) || height < 0))
+            throw new ArgumentOutOfRangeException(nameof(caretHeight));
+        Source = source; Bounds = bounds; CaretHeight = caretHeight ?? bounds.Height; Spans = Array.AsReadOnly(copy);
     }
 }
 
@@ -74,7 +78,7 @@ public sealed class TextInteractionMap : ITextInteractionMap
     public static TextInteractionMap FromSnapshot(LayoutSnapshot snapshot, TextSurface surface = TextSurface.Body)
     {
         ArgumentNullException.ThrowIfNull(snapshot);
-        var lines = snapshot.Blocks.SelectMany(block => block.Lines).Select(line =>
+        var lines = snapshot.Blocks.SelectMany(block => block.Lines.Select((line, lineIndex) =>
         {
             var spans = new List<TextInteractionSpan>();
             foreach (var run in line.Runs)
@@ -96,8 +100,28 @@ public sealed class TextInteractionMap : ITextInteractionMap
                     AddGraphemes(spans, snapshot.Source, cluster.Source, first, last);
                 }
             }
-            return new TextInteractionLine(line.Source, line.Bounds, spans);
-        });
+            // Knuth-Plass may omit boundary spaces from the painted line.
+            // They remain real source positions and must not lose the caret.
+            var start = line.Source.Start;
+            var end = line.Source.End;
+            var leading = lineIndex == 0 ? block.Source.Start : block.Lines[lineIndex - 1].Source.End;
+            var trailing = lineIndex == block.Lines.Length - 1 ? block.Source.End : end;
+            var startX = spans.Count == 0 ? line.Bounds.X : spans.MinBy(span => span.Source.Start).StartX;
+            var endX = spans.Count == 0 ? line.Bounds.Right : spans.MaxBy(span => span.Source.End).EndX;
+            if (leading <= start && snapshot.Source.GetText(new(leading, start - leading)).All(c => c == ' '))
+            {
+                AddGraphemes(spans, snapshot.Source, new(leading, start - leading), startX, startX);
+                start = leading;
+            }
+            if (end <= trailing && snapshot.Source.GetText(new(end, trailing - end)).All(c => c == ' '))
+            {
+                AddGraphemes(spans, snapshot.Source, new(end, trailing - end), endX, endX);
+                end = trailing;
+            }
+            if (spans.Count == 0 && snapshot.Source.GetText(line.Source).All(c => c == ' '))
+                AddGraphemes(spans, snapshot.Source, line.Source, line.Bounds.X, line.Bounds.X);
+            return new TextInteractionLine(new(start, end - start), line.Bounds, spans);
+        }));
         return new(snapshot.Source, surface, lines);
     }
 
@@ -155,7 +179,7 @@ public sealed class TextInteractionMap : ITextInteractionMap
             : Array.FindIndex(stops, stop => stop.Affinity == CaretAffinity.Downstream);
         var stop = stops[preferred >= 0 ? preferred :
             caret.Affinity == CaretAffinity.Upstream ? stops.Length - 1 : 0];
-        return new(stop.X, line.Bounds.Y, 0, line.Bounds.Height);
+        return new(stop.X, line.Bounds.Y, 0, line.CaretHeight);
     }
 
     /// <summary>Follow visual x, including RTL runs and soft-line transitions.</summary>

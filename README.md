@@ -2,9 +2,11 @@
 
 基于 WinUI 3、CommunityToolkit.Mvvm、DirectWrite 和 Win2D 的原生 Markdown 编辑器。正文、代码和数学公式使用原生绘制，不依赖浏览器或 WebView。
 
+面向客户的软件介绍、快速上手、语法示例和使用说明，请阅读 **[MDEditor 软件介绍与使用指南](docs/README.md)**。
+
 ## 功能
 
-- CommonMark 与约定的 GFM 扩展：标题、强调、删除线、链接、引用、列表、任务项、代码块、表格及分割线。
+- CommonMark 与约定的 GFM 扩展：标题、强调、删除线、链接、引用、列表、任务项、代码块、表格及输入完成即预览的分割线。
 - 实时编辑与源码展开/折叠；Unicode 光标和选区、撤销/重做、剪贴板及中文输入法。
 - Knuth–Plass 两端对齐、中文禁则和标点处理、英文断词；调整窗口和缩放时重新排版。
 - 行内及独立 TeX 公式、原生数学字形、脚注、公式编号和交叉引用。
@@ -22,12 +24,16 @@
 在 Visual Studio Developer PowerShell、仓库根目录执行：
 
 ```powershell
-MSBuild.exe MDEditor/MDEditor.csproj /restore /t:Build /p:Configuration=Release /p:Platform=x64 /p:GenerateAppxPackageOnBuild=false
+MSBuild.exe MDEditor/MDEditor.csproj /restore /t:Build /p:Configuration=Release /p:Platform=x64 /p:RuntimeIdentifier=win-x64 /p:GenerateAppxPackageOnBuild=false
 dotnet test --project tests/MDEditor.Core.Tests/MDEditor.Core.Tests.csproj -c Debug
 dotnet test --project tests/MDEditor.Core.Tests/MDEditor.Core.Tests.csproj -c Release
 ```
 
-正常构建不生成安装包。随源码保留的 Node、WASM、高亮包及许可文件是离线运行所需资源，不是临时缓存；不要删除。发布只需选择 MDEditor 主项目，详见[打包说明](docs/Packaging.md)。
+正常构建不生成安装包；VS F5 的开发部署不是生成发行安装包。随源码保留的数学服务、字体、Node、WASM、高亮包及许可文件是运行所需资源，不是临时缓存；不要删除。
+
+自行发布时只选择 MDEditor 主项目，现有单项目 MSIX 流程会包含依赖，不要求另建 Windows Application Packaging Project，也不需要分别发布所有项目。架构必须匹配：x64/win-x64、x86/win-x86、ARM64/win-arm64；保留自包含 .NET、不裁剪、非单文件配置。发布者仍需验证签名、Windows App Runtime 依赖和目标电脑的安装运行，交叉构建不等于实机验收。
+
+离线高亮资源位于 `MDEditor/Assets/StarryNight`，生成工具位于 `tools/StarryNight`。发布文件检查工具为 `tools/Verify-ReleasePayload.ps1`，构建依赖检查为 `tests/Verify-Step35Release.ps1`。不要提交签名私钥、安装包、用户文档或恢复草稿。
 
 ## 常用快捷键
 
@@ -45,12 +51,4 @@ dotnet test --project tests/MDEditor.Core.Tests/MDEditor.Core.Tests.csproj -c Re
 
 ## 文档
 
-- [模块架构与构建](docs/architecture.md)
-- [打包与发行检查](docs/Packaging.md)
-- [GitHub 风格主题](docs/github-markdown-theme.md)
-- [离线代码高亮与依赖更新](docs/starry-night-highlighting.md)
-- [搜索、替换与源码模式](docs/search-source-mode.md)
-- [剪贴板图片与附件保存](docs/clipboard-images.md)
-- [Markdown 分割线](docs/markdown-thematic-breaks.md)
-- [矢量 PDF 导出](docs/pdf-export.md)
-- [无障碍接口](docs/accessibility.md)
+[软件介绍与使用指南](docs/README.md)：安装与快速上手、界面与主题、Markdown 和公式、图片附件、搜索替换、保存恢复、PDF、快捷键及当前功能边界。

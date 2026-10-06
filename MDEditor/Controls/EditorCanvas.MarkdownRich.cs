@@ -21,10 +21,11 @@ public sealed partial class EditorCanvas
         if (_livePresentation is { } previous)
         {
             var update = MarkdownIncrementalParser.Update(previous.Syntax, source);
-            _livePresentation = MarkdownRichTextProjection.FromSyntax(update.Syntax, reveal, SearchViewModel.IsSourceMode);
+            _livePresentation = MarkdownRichTextProjection.FromSyntax(update.Syntax, reveal, SearchViewModel.IsSourceMode,
+                revealThematicBreakBoundaries: false);
         }
         else _livePresentation = MarkdownRichTextProjection.FromSyntax(MarkdownSyntaxParser.Parse(source),
-            reveal, SearchViewModel.IsSourceMode);
+            reveal, SearchViewModel.IsSourceMode, revealThematicBreakBoundaries: false);
         RequestCodeHighlight(_livePresentation.Text.CodeBlocks);
         return _livePresentation;
     }
@@ -37,7 +38,12 @@ public sealed partial class EditorCanvas
         var reveal = _selection is { Anchor.Surface: TextSurface.Body, Focus.Surface: TextSurface.Body } selection &&
             selection.Focus.SourceVersion == source.Version ? selection.Focus.Offset : (int?)null;
         var current = CurrentPresentation();
-        if (current.Text.RevealedAtSourceOffset == reveal) return;
+        // Typing a complete rule previews it at once; an explicit click/arrow at
+        // the same boundary must still be able to open its source for editing.
+        if (current.Text.RevealedAtSourceOffset == reveal &&
+            !current.Text.ActiveReplacements.Any(replacement =>
+                replacement.Kind == MarkdownReplacementKind.ThematicBreak &&
+                (replacement.Source.Start == reveal || replacement.Source.End == reveal))) return;
         var next = MarkdownRichTextProjection.FromSyntax(current.Syntax, reveal);
         if (current.Text.HiddenRanges.SequenceEqual(next.Text.HiddenRanges) &&
             current.Text.ActiveReplacements.SequenceEqual(next.Text.ActiveReplacements) &&

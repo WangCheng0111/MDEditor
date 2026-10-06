@@ -44,7 +44,7 @@ public sealed class MarkdownProjectionInteractionMap : ITextInteractionMap
                 var source = projection.ToSourceRange(span.Source);
                 return new TextInteractionSpan(source, span.StartX, span.EndX);
             });
-            return new TextInteractionLine(new(start, end - start), line.Bounds, spans);
+            return new TextInteractionLine(new(start, end - start), line.Bounds, spans, line.CaretHeight);
         }).ToArray());
     }
 

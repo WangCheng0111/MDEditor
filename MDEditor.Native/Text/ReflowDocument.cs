@@ -675,9 +675,9 @@ public sealed class ReflowDocument : IDisposable
             var paragraph = _paragraphs[p]; var cursor = _maps[p].Paragraph.Start;
             if (paragraph.Breaks.Lines.Length == 0)
             {
-                // The non-cached code path keeps an empty hit-test line for a folded fence.
+                // Empty/folded lines and all-space paragraphs keep a hit-test line.
                 // It has no selected break and no glyphs to compare against a target width.
-                coverage &= _maps[p].Paragraph.Length == 0 && paragraph.Lines.All(result =>
+                coverage &= _content.Source.GetText(_maps[p].Paragraph).All(c => c == ' ') && paragraph.Lines.All(result =>
                     result.Line.Source.Length == 0 && result.Line.Runs.IsEmpty);
                 continue;
             }
@@ -691,7 +691,12 @@ public sealed class ReflowDocument : IDisposable
                 var expected = literal || chosen.IsParagraphEnd && chosen.AdjustmentRatio == 0
                     ? chosen.NaturalWidth : Width - indent;
                 advanceError = Math.Max(advanceError, Math.Abs(line.Runs.Sum(r => r.Advance) - expected));
-                var left = double.PositiveInfinity; var right = double.NegativeInfinity;
+                // A whitespace-only selected line has no ink span. Keep its
+                // finite zero-width origin without accepting lost visible text.
+                if (line.Runs.IsEmpty)
+                    coverage &= _content.Source.GetText(line.Source).All(c => c == ' ');
+                var left = line.Runs.IsEmpty ? indent : double.PositiveInfinity;
+                var right = line.Runs.IsEmpty ? indent : double.NegativeInfinity;
                 foreach (var run in line.Runs)
                 {
                     var origin = GlyphPaintCoordinates.Resolve(line, run, new(0, 0)).X;

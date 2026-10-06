@@ -16,6 +16,6 @@ public static class MarkdownThematicBreakLayout
         if (!double.IsFinite(fontSize) || fontSize <= 0) throw new ArgumentOutOfRangeException(nameof(fontSize));
         if (!double.IsFinite(indent) || indent < 0 || indent >= width) throw new ArgumentOutOfRangeException(nameof(indent));
         return new(display, new(indent, top, width - indent, fontSize * 0.25),
-            [new TextInteractionSpan(display, indent, width)]);
+            [new TextInteractionSpan(display, indent, width)], caretHeight: fontSize * 1.5);
     }
 }

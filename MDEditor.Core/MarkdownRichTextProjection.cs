@@ -48,7 +48,8 @@ public sealed class MarkdownRichTextProjection
     public ImmutableArray<MarkdownTableDisplay> TableLines { get; }
     public ImmutableArray<MarkdownThematicBreakDisplay> ThematicBreaks { get; }
 
-    private MarkdownRichTextProjection(MarkdownSyntaxDocument syntax, int? revealAtSourceOffset, bool sourceMode = false)
+    private MarkdownRichTextProjection(MarkdownSyntaxDocument syntax, int? revealAtSourceOffset, bool sourceMode = false,
+        bool revealThematicBreakBoundaries = true)
     {
         Syntax = syntax;
         if (sourceMode)
@@ -60,7 +61,7 @@ public sealed class MarkdownRichTextProjection
             _codeByLineStart = new(); _tableByLineStart = new(); _blockByLineStart = new();
             return;
         }
-        Text = MarkdownEditProjection.Create(syntax, revealAtSourceOffset);
+        Text = MarkdownEditProjection.Create(syntax, revealAtSourceOffset, revealThematicBreakBoundaries);
         var flags = new MarkdownVisualStyle[Text.Display.Length];
         var mathDisplayRanges = Text.MathSpans.Select(span => Text.ToDisplayRange(span.Source)).ToArray();
         var units = new Dictionary<(MarkdownSyntaxKind Kind, SourceRange Source), MarkdownProjectionUnit>();
@@ -145,13 +146,14 @@ public sealed class MarkdownRichTextProjection
     }
 
     public static MarkdownRichTextProjection Create(SourceTextSnapshot source,
-        int? revealAtSourceOffset = null) =>
+        int? revealAtSourceOffset = null, bool revealThematicBreakBoundaries = true) =>
         new(MarkdownSyntaxParser.Parse(source ?? throw new ArgumentNullException(nameof(source))),
-            revealAtSourceOffset);
+            revealAtSourceOffset, revealThematicBreakBoundaries: revealThematicBreakBoundaries);
 
     public static MarkdownRichTextProjection FromSyntax(MarkdownSyntaxDocument syntax,
-        int? revealAtSourceOffset = null, bool sourceMode = false) =>
-        new(syntax ?? throw new ArgumentNullException(nameof(syntax)), revealAtSourceOffset, sourceMode);
+        int? revealAtSourceOffset = null, bool sourceMode = false, bool revealThematicBreakBoundaries = true) =>
+        new(syntax ?? throw new ArgumentNullException(nameof(syntax)), revealAtSourceOffset, sourceMode,
+            revealThematicBreakBoundaries);
 
     public int HeadingLevelAt(SourceRange displayParagraph)
     {
